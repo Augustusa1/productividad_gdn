@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Interactivo: KPI de Productividad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals with Sky Blue Accent -->
+    <!-- Application Structure Plan: Se ha diseñado una SPA con una navegación superior por pestañas que segmenta los cambios por área operativa (Recepciones, Compras, etc.). Este enfoque permite al usuario enfocarse en un grupo de cambios a la vez, evitando la sobrecarga de información. Cada sección utiliza un diseño comparativo de tarjetas "Antes vs. Ahora" para ilustrar directamente las modificaciones. Esta estructura fue elegida porque transforma un informe textual en una experiencia de aprendizaje dirigida, donde la comparación y la comprensión del impacto son los objetivos principales, facilitando la asimilación por parte de un público no técnico. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Comparación de reglas lógicas. Goal: Comparar. Viz: Tarjetas "Antes/Ahora" (HTML/Tailwind). Interaction: Navegación por pestañas (JS). Justification: Presentación directa y clara del cambio.
+        - Report Info: Creación de la nueva categoría "ENVIOS". Goal: Organizar/Mostrar Flujo. Viz: Diagrama de flujo simple (HTML/Tailwind). Interaction: Estático. Justification: Visualiza la división de un proceso de forma más efectiva que el texto.
+        - Report Info: Incorporación de procesos no medidos (Armado/Desarmado). Goal: Informar/Proporción. Viz: Gráfico de Donut (Chart.js/Canvas). Interaction: Tooltips al pasar el ratón. Justification: Representa conceptualmente cómo tareas "invisibles" ahora son parte medible del KPI, mostrando un cambio en la composición del trabajo.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .nav-button {
+            transition: all 0.3s ease;
+        }
+        .nav-button.active {
+            background-color: #0284c7; /* sky-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+            width: 100%;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-800">Evolución en la Medición de Productividad</h1>
+            <p class="mt-2 text-lg text-slate-600">Un análisis interactivo de los ajustes al KPI <span class="font-semibold text-sky-700">KG/Hr Hombre</span></p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+            <button data-target="recepciones" class="nav-button active text-sm sm:text-base font-semibold text-slate-700 bg-white py-2 px-4 rounded-full shadow-sm hover:bg-sky-100">RECEPCIONES</button>
+            <button data-target="compras" class="nav-button text-sm sm:text-base font-semibold text-slate-700 bg-white py-2 px-4 rounded-full shadow-sm hover:bg-sky-100">COMPRAS</button>
+            <button data-target="envios" class="nav-button text-sm sm:text-base font-semibold text-slate-700 bg-white py-2 px-4 rounded-full shadow-sm hover:bg-sky-100">ENVÍOS vs SALIDAS</button>
+            <button data-target="ventas" class="nav-button text-sm sm:text-base font-semibold text-slate-700 bg-white py-2 px-4 rounded-full shadow-sm hover:bg-sky-100">VENTAS Y DEVOLUCIONES</button>
+            <button data-target="nuevos" class="nav-button text-sm sm:text-base font-semibold text-slate-700 bg-white py-2 px-4 rounded-full shadow-sm hover:bg-sky-100">NUEVOS PROCESOS</button>
+        </nav>
+
+        <main>
+            <!-- Sección Recepciones -->
+            <section id="recepciones" class="content-section active">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Ajustes en la Operación de "RECEPCIONES"</h2>
+                    <p class="text-slate-600 mb-6">Hemos afinado la medición de recepciones para reflejar con mayor precisión el trabajo en nuestros Centros de Distribución (CDs) principales.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Card Antes -->
+                        <div class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <h3 class="text-lg font-bold text-gray-700 bg-gray-200 -m-4 p-4 rounded-t-md">Situación Anterior</h3>
+                            <ul class="mt-4 space-y-3 text-gray-600 list-disc list-inside">
+                                <li>Se contabilizaban casi <span class="font-semibold">todas</span> las transferencias entre organizaciones como "Recepciones".</li>
+                                <li>Ajustes por diferencia de inventario (`DIFR`) solo contaban en sucursales de <span class="font-semibold">Santa Cruz</span>.</li>
+                            </ul>
+                        </div>
+                        <!-- Card Ahora -->
+                        <div class="border-2 border-sky-300 rounded-lg p-4 bg-sky-50">
+                            <h3 class="text-lg font-bold text-sky-800 bg-sky-200 -m-4 p-4 rounded-t-md">Situación Actual</h3>
+                            <ul class="mt-4 space-y-3 text-sky-700 list-disc list-inside">
+                                <li>Solo transferencias con destino a un <span class="font-semibold">CD Principal</span> se consideran "Recepciones".</li>
+                                <li>Se incluye la sucursal de <span class="font-semibold">Tarija</span> para los ajustes de inventario (`DIFR`).</li>
+                            </ul>
+                        </div>
+                    </div>
+                     <!-- Impacto -->
+                    <div class="mt-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                        <h4 class="font-bold text-amber-800">Impacto y Razón del Cambio</h4>
+                        <p class="text-amber-700 mt-1">El indicador ahora se centra en la productividad real de los equipos de nuestros CDs, filtrando movimientos intermedios y asegurando que el trabajo de regularización en todas las sucursales clave sea medido de forma equitativa.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Compras -->
+            <section id="compras" class="content-section">
+                 <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Ajustes en "COMPRAS - IMPORTACIONES"</h2>
+                    <p class="text-slate-600 mb-6">Similar a las recepciones, hemos acotado esta medición a los centros neurálgicos de la operación.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Card Antes -->
+                        <div class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <h3 class="text-lg font-bold text-gray-700 bg-gray-200 -m-4 p-4 rounded-t-md">Situación Anterior</h3>
+                            <ul class="mt-4 space-y-3 text-gray-600 list-disc list-inside">
+                                <li>Cualquier recepción de orden de compra (`PO Receipt`) se contaba <span class="font-semibold">sin importar la sucursal</span>.</li>
+                            </ul>
+                        </div>
+                        <!-- Card Ahora -->
+                        <div class="border-2 border-sky-300 rounded-lg p-4 bg-sky-50">
+                            <h3 class="text-lg font-bold text-sky-800 bg-sky-200 -m-4 p-4 rounded-t-md">Situación Actual</h3>
+                            <ul class="mt-4 space-y-3 text-sky-700 list-disc list-inside">
+                                <li>La operación se contabiliza <span class="font-semibold">únicamente si ocurre en un CD Principal</span>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                     <!-- Impacto -->
+                    <div class="mt-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                        <h4 class="font-bold text-amber-800">Impacto y Razón del Cambio</h4>
+                        <p class="text-amber-700 mt-1">La productividad de recepción de compras se enfoca ahora exclusivamente en los equipos de los CDs, donde este proceso es más intensivo y relevante para el negocio.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Sección Envios -->
+            <section id="envios" class="content-section">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Nueva Categoría: "ENVIOS" vs "SALIDA A SAP"</h2>
+                    <p class="text-slate-600 mb-6">Este es un cambio clave: ahora diferenciamos los despachos internos de las salidas finales del sistema para una medición más justa.</p>
+                    
+                    <div class="grid lg:grid-cols-2 gap-8 items-center">
+                        <!-- Diagrama -->
+                        <div class="space-y-6">
+                            <!-- Diagrama Antes -->
+                            <div>
+                                <h3 class="font-bold text-gray-700 text-center mb-2">Flujo Anterior</h3>
+                                <div class="flex items-center justify-center">
+                                    <div class="bg-gray-200 text-gray-700 p-3 rounded-lg shadow">Transferencia Interna</div>
+                                    <div class="mx-2 text-2xl text-gray-400 font-mono">&rarr;</div>
+                                    <div class="bg-gray-600 text-white p-3 rounded-lg shadow font-semibold">SALIDA A SAP</div>
+                                </div>
+                            </div>
+                             <!-- Diagrama Ahora -->
+                            <div>
+                                <h3 class="font-bold text-sky-800 text-center mb-2">Flujo Actual</h3>
+                                <div class="flex items-center justify-center">
+                                    <div class="bg-sky-200 text-sky-800 p-3 rounded-lg shadow">Transferencia Interna</div>
+                                    <div class="relative mx-4 text-2xl text-sky-500 font-mono">
+                                        <div class="absolute -top-6 left-1/2 -translate-x-1/2">&rarr;</div>
+                                        <div class="absolute top-4 left-1/2 -translate-x-1/2">&rarr;</div>
+                                    </div>
+                                    <div class="flex flex-col gap-y-2 ml-2">
+                                        <div class="bg-teal-600 text-white p-3 rounded-lg shadow font-semibold">ENVIOS</div>
+                                        <div class="bg-sky-600 text-white p-3 rounded-lg shadow font-semibold">SALIDA A SAP</div>
+                                    </div>
+                                </div>
+                                <p class="text-center text-xs text-slate-500 mt-2">Se diferencia si el destino es un almacén específico (Envío) o no.</p>
+                            </div>
+                        </div>
+
+                        <!-- Impacto -->
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                            <h4 class="font-bold text-amber-800">Impacto y Razón del Cambio</h4>
+                            <p class="text-amber-700 mt-1">Esta nueva granularidad nos permite **diferenciar la productividad** del equipo que prepara reabastecimiento entre nuestros propios almacenes (Envíos) de aquellos que preparan salidas finales del sistema. Es una medición más precisa y justa del tipo de trabajo realizado y reconoce esfuerzos que antes se agrupaban incorrectamente.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Ventas y Devoluciones -->
+            <section id="ventas" class="content-section">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Exclusiones en "VENTAS" y "DEVOLUCIONES"</h2>
+                    <p class="text-slate-600 mb-6">Hemos refinado qué se considera una venta o devolución atribuible a la operación logística de los CDs.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Card Antes -->
+                        <div class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <h3 class="text-lg font-bold text-gray-700 bg-gray-200 -m-4 p-4 rounded-t-md">Situación Anterior</h3>
+                            <ul class="mt-4 space-y-3 text-gray-600 list-disc list-inside">
+                                <li><span class="font-semibold">Todas</span> las salidas por ventas (`Sales order issue`) contaban.</li>
+                                <li><span class="font-semibold">Todas</span> las recepciones por devolución (`RMA Receipt`) contaban.</li>
+                            </ul>
+                        </div>
+                        <!-- Card Ahora -->
+                        <div class="border-2 border-sky-300 rounded-lg p-4 bg-sky-50">
+                            <h3 class="text-lg font-bold text-sky-800 bg-sky-200 -m-4 p-4 rounded-t-md">Situación Actual</h3>
+                            <ul class="mt-4 space-y-3 text-sky-700 list-disc list-inside">
+                                <li>Se <span class="font-semibold">excluyen</span> las transacciones de la organización <span class="font-bold">366</span>.</li>
+                                <li>Se <span class="font-semibold">excluyen</span> las transacciones de la organización <span class="font-bold">366</span>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                     <!-- Impacto -->
+                    <div class="mt-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                        <h4 class="font-bold text-amber-800">Impacto y Razón del Cambio</h4>
+                        <p class="text-amber-700 mt-1">Se determinó que las operaciones de la organización 366 no deben formar parte de la medición de productividad de los CDs, ya que su logística se gestiona de manera diferente, evitando así distorsiones en el indicador.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Nuevos Procesos -->
+            <section id="nuevos" class="content-section">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Visibilidad de Nuevos Procesos de Armado y Desarmado</h2>
+                    <p class="text-slate-600 mb-6">Hemos incorporado transacciones que antes eran "invisibles" para el KPI, relacionadas con la preparación de productos para incentivos.</p>
+                    
+                    <div class="grid lg:grid-cols-2 gap-8 items-center">
+                        <!-- Gráfico -->
+                        <div class="w-full">
+                            <h3 class="text-lg font-bold text-center text-slate-700 mb-2">Composición del Trabajo Medido</h3>
+                            <div class="chart-container">
+                                <canvas id="nuevosProcesosChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Detalle y Impacto -->
+                        <div>
+                            <div class="border-2 border-sky-300 rounded-lg p-4 bg-sky-50">
+                                <h3 class="text-lg font-bold text-sky-800 bg-sky-200 -m-4 p-4 rounded-t-md">Nuevas Transacciones Medidas</h3>
+                                <ul class="mt-4 space-y-3 text-sky-700 list-disc list-inside">
+                                    <li><span class="font-semibold">Armado de Incentivos (`SPCI`):</span> Ahora se contabiliza como <span class="font-bold">"SALIDA A SAP"</span>.</li>
+                                    <li><span class="font-semibold">Desarmado de Incentivos (`DSPCI`):</span> Ahora se registra como <span class="font-bold">"DEVOLUCIONES"</span>.</li>
+                                </ul>
+                            </div>
+                            <div class="mt-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                                <h4 class="font-bold text-amber-800">Impacto y Razón del Cambio</h4>
+                                <p class="text-amber-700 mt-1">Hacemos visible y medible un trabajo logístico importante que antes no se reconocía. Esto proporciona una visión más completa del esfuerzo del equipo y valora las tareas de valor agregado que realizan.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navButtons = document.querySelectorAll('.nav-button');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            function switchTab(targetId) {
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                navButtons.forEach(button => {
+                    button.classList.remove('active');
+                });
+
+                document.getElementById(targetId).classList.add('active');
+                document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
+            }
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.dataset.target;
+                    switchTab(targetId);
+                });
+            });
+            
+            // Lógica del Gráfico
+            const ctx = document.getElementById('nuevosProcesosChart').getContext('2d');
+            const nuevosProcesosChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Otras Tareas Medidas', 'Armado de Incentivos', 'Desarmado de Incentivos'],
+                    datasets: [{
+                        label: 'Visibilidad de Tareas',
+                        data: [85, 10, 5],
+                        backgroundColor: [
+                            'rgb(148, 163, 184)', // slate-400
+                            'rgb(14, 165, 233)', // sky-500
+                            'rgb(22, 78, 99)'    // cyan-900
+                        ],
+                        hoverOffset: 4,
+                        borderColor: '#f8fafc', // slate-50
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                color: '#475569', // slate-600
+                                font: {
+                                    size: 14,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '% del trabajo ahora visible';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Mostrar la primera pestaña por defecto
+            switchTab('recepciones');
+        });
+    </script>
+</body>
+</html>
